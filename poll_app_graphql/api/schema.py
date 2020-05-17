@@ -43,8 +43,8 @@ class CreatePoll(graphene.Mutation):
         poll = PollModel(
             question=poll_data.question,
             choices=poll_data.choices
-        )
-        poll.save()
+        ).save()
+
         return poll
 
 
