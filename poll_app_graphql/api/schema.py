@@ -31,6 +31,9 @@ class ChoiceInput(graphene.InputObjectType):
 class PollInput(graphene.InputObjectType):
     question = graphene.String(required=True)
     choices = graphene.List(ChoiceInput, required=True)
+    voting_start = graphene.DateTime()
+    voting_end = graphene.DateTime()
+    results_available_at = graphene.DateTime()
 
 
 class CreatePoll(graphene.Mutation):

@@ -19,23 +19,14 @@ class Choice(db.EmbeddedDocument):
 
 
 class Poll(db.Document):
+    # id is implicit
+    created_at = ComplexDateTimeField(default=datetime.utcnow)
+    voting_start = ComplexDateTimeField(default=datetime.utcnow)
+    voting_end = ComplexDateTimeField(default=None, null=True)
+    results_available_at = ComplexDateTimeField(default=datetime.utcnow)
     question = StringField(max_length=512)
     choices = EmbeddedDocumentListField(Choice)
 
     @property
     def vote_count(self):
         return sum(c.vote_count for c in self.choices)
-
-
-if __name__ == '__main__':
-    connection = connect('pollapp', host='localhost', port=27017)
-
-    example = Poll(
-        question="What?",
-        choices=[
-            Choice(text="one", votes=[Vote()]),
-            Choice(text="two")
-        ]
-    )
-    example.save()
-    print(example.choices[0].votes[0].cast_time)
