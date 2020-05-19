@@ -1,10 +1,16 @@
 from . import db
 from datetime import datetime
-import mongoengine
 from mongoengine import StringField, EmbeddedDocumentListField, ComplexDateTimeField, ObjectIdField
-from mongoengine import ValidationError
+from mongoengine import ValidationError as MongoEngineValidationError
 from bson.objectid import ObjectId
 
+
+class SimpleError(Exception):
+    def __init__(self, message):
+        self.message = message
+
+ValidationError = SimpleError
+# ValidationError = MongoEngineValidationError
 
 class Vote(db.EmbeddedDocument):
     cast_time = ComplexDateTimeField(default=datetime.utcnow)
@@ -40,3 +46,4 @@ class Poll(db.Document):
             self.results_available_at = self.created_at
         if len(self.choices) < 2:
             raise ValidationError("Poll must have at least 2 choices.")
+
