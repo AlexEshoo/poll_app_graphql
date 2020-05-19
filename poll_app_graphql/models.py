@@ -1,6 +1,8 @@
 from . import db
 from datetime import datetime
-from mongoengine import StringField, EmbeddedDocumentListField, connect, ComplexDateTimeField, ObjectIdField
+import mongoengine
+from mongoengine import StringField, EmbeddedDocumentListField, ComplexDateTimeField, ObjectIdField
+from mongoengine import ValidationError
 from bson.objectid import ObjectId
 
 
@@ -30,3 +32,11 @@ class Poll(db.Document):
     @property
     def vote_count(self):
         return sum(c.vote_count for c in self.choices)
+
+    def clean(self):
+        if self.voting_end < self.voting_start:
+            raise ValidationError("Voting End Time cannot be before Voting Start Time.")
+        if self.results_available_at < self.created_at:
+            self.results_available_at = self.created_at
+        if len(self.choices) < 2:
+            raise ValidationError("Poll must have at least 2 choices.")
