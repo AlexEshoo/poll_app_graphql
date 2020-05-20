@@ -94,9 +94,13 @@ class CastVote(graphene.Mutation):
 
 class Query(graphene.ObjectType):
     polls = graphene.List(Poll)
+    poll = graphene.Field(Poll, poll_id=graphene.ID(required=True))
 
     def resolve_polls(self, info):
         return list(PollModel.objects.all())
+
+    def resolve_poll(self, info, poll_id):
+        return PollModel.objects.get(id=poll_id)
 
 
 class Mutation(graphene.ObjectType):
