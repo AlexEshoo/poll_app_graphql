@@ -41,7 +41,7 @@ class Poll(db.Document):
         return sum(c.vote_count for c in self.choices)
 
     def clean(self):
-        if self.voting_end < self.voting_start:
+        if self.voting_end and self.voting_end < self.voting_start:
             raise ValidationError("Voting End Time cannot be before Voting Start Time.")
         if self.results_available_at < self.created_at:
             self.results_available_at = self.created_at
