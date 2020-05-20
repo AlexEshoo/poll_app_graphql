@@ -4,6 +4,8 @@ from ..models import Poll as PollModel
 from ..models import Choice as ChoiceModel
 from ..models import Vote as VoteModel
 
+from flask import request
+
 from datetime import datetime, timedelta
 
 
@@ -72,6 +74,23 @@ class CreatePoll(graphene.Mutation):
         return poll
 
 
+class CastVote(graphene.Mutation):
+    class Arguments:
+        poll_id = graphene.ID()
+        choice_id = graphene.ID()
+
+    Output = Poll
+
+    def mutate(self, info, poll_id, choice_id):
+        poll = PollModel.objects.get(id=poll_id)
+        choice = poll.choices.get(id=choice_id)
+        choice.votes.append(VoteModel(ip_address=request.remote_addr))
+
+        poll.save()
+
+        return poll
+
+
 class Query(graphene.ObjectType):
     polls = graphene.List(Poll)
 
@@ -81,6 +100,7 @@ class Query(graphene.ObjectType):
 
 class Mutation(graphene.ObjectType):
     create_poll = CreatePoll.Field()
+    cast_vote = CastVote.Field()
 
 
 schema = graphene.Schema(
