@@ -16,10 +16,10 @@ class Vote(MongoengineObjectType):
 
 
 class Choice(MongoengineObjectType):
-    vote_count = graphene.Int()
-
     class Meta:
         model = ChoiceModel
+
+    vote_count = graphene.Int()
 
 
 class Poll(MongoengineObjectType):
