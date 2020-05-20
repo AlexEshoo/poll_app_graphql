@@ -12,7 +12,7 @@ from datetime import datetime, timedelta
 class Vote(MongoengineObjectType):
     class Meta:
         model = VoteModel
-        exclude_fields=("ip_address")
+        exclude_fields = ("ip_address")
 
 
 class Choice(MongoengineObjectType):
@@ -20,6 +20,14 @@ class Choice(MongoengineObjectType):
         model = ChoiceModel
 
     vote_count = graphene.Int()
+
+
+    def resolve_vote_count(self, info):
+        """
+        Overrides the behavior of this query to not return the
+        results before they are scheduled to be public
+        """
+        return self.vote_count if self.poll.results_available else None
 
 
 class Poll(MongoengineObjectType):

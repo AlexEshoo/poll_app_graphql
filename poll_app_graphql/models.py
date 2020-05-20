@@ -26,6 +26,10 @@ class Choice(db.EmbeddedDocument):
     def vote_count(self):
         return self.votes.count()
 
+    @property
+    def poll(self):
+        return self._instance  # Returns the parent for the EmbeddedDocument
+
 
 class Poll(db.Document):
     # id is implicit
@@ -39,6 +43,10 @@ class Poll(db.Document):
     @property
     def vote_count(self):
         return sum(c.vote_count for c in self.choices)
+
+    @property
+    def results_available(self):
+        return datetime.utcnow() > self.results_available_at
 
     def clean(self):
         if self.voting_end and self.voting_end < self.voting_start:
