@@ -1,9 +1,15 @@
 from . import db
 from datetime import datetime
-from mongoengine import StringField, EmbeddedDocumentListField, ComplexDateTimeField, ObjectIdField
+from mongoengine import StringField, EmbeddedDocumentListField, ComplexDateTimeField, ObjectIdField, IntField
 from mongoengine import ValidationError as MongoEngineValidationError
 from bson.objectid import ObjectId
+from enum import Enum
 
+class DuplicateVoteProtectionMode(Enum):
+    NONE = 0
+    COOKIE = 1
+    IP_ADDRESS = 2
+    LOGIN = 3
 
 class SimpleError(Exception):
     def __init__(self, message):
@@ -40,6 +46,7 @@ class Poll(db.Document):
     results_available_at = ComplexDateTimeField(default=datetime.utcnow)
     question = StringField(max_length=512)
     choices = EmbeddedDocumentListField(Choice)
+    duplicate_vote_protection_mode = IntField()
 
     @property
     def vote_count(self):

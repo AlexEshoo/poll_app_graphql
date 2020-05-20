@@ -3,10 +3,13 @@ from graphene_mongo import MongoengineObjectType
 from ..models import Poll as PollModel
 from ..models import Choice as ChoiceModel
 from ..models import Vote as VoteModel
+from ..models import DuplicateVoteProtectionMode
 
 from flask import request
 
 from datetime import datetime, timedelta
+
+DuplicateVoteProtectionModeEnum = graphene.Enum.from_enum(DuplicateVoteProtectionMode)
 
 
 class Vote(MongoengineObjectType):
@@ -20,7 +23,6 @@ class Choice(MongoengineObjectType):
         model = ChoiceModel
 
     vote_count = graphene.Int()
-
 
     def resolve_vote_count(self, info):
         """
@@ -38,6 +40,7 @@ class Poll(MongoengineObjectType):
         model = PollModel
 
     vote_count = graphene.Int()
+    duplicate_vote_protection_mode = DuplicateVoteProtectionModeEnum()  # Needed here to parse INT -> ENUM
 
 
 class ChoiceInput(graphene.InputObjectType):
@@ -47,12 +50,10 @@ class ChoiceInput(graphene.InputObjectType):
 class PollInput(graphene.InputObjectType):
     question = graphene.String(required=True)
     choices = graphene.List(ChoiceInput, required=True)
-    # voting_start = graphene.DateTime()
     voting_start_in = graphene.Int()  # Time in seconds from submission
-    # voting_end = graphene.DateTime()
     voting_end_in = graphene.Int()  # Time in seconds from submission
-    # results_available_at = graphene.DateTime()
     results_available_in = graphene.Int()  # Time in seconds from submission
+    duplicate_vote_protection_mode = DuplicateVoteProtectionModeEnum()
 
 
 class CreatePoll(graphene.Mutation):
@@ -80,7 +81,8 @@ class CreatePoll(graphene.Mutation):
             choices=poll_data.choices,
             voting_start=voting_start,
             voting_end=voting_end,
-            results_available_at=results_available_at
+            results_available_at=results_available_at,
+            duplicate_vote_protection_mode=poll_data.duplicate_vote_protection_mode
         ).save()
 
         return poll
