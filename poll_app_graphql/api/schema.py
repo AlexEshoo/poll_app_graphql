@@ -12,6 +12,7 @@ from datetime import datetime, timedelta
 class Vote(MongoengineObjectType):
     class Meta:
         model = VoteModel
+        exclude_fields=("ip_address")
 
 
 class Choice(MongoengineObjectType):
