@@ -13,6 +13,7 @@ ValidationError = SimpleError
 # ValidationError = MongoEngineValidationError
 
 class Vote(db.EmbeddedDocument):
+    id = ObjectIdField(required=True, default=ObjectId, unique=True, primary_key=True)
     cast_time = ComplexDateTimeField(default=datetime.utcnow)
     ip_address = StringField()  # validation not needed since always populated by flask request proxy (?)
 
