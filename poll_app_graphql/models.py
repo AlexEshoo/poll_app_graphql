@@ -42,6 +42,10 @@ class Choice(db.EmbeddedDocument):
     def poll(self):
         return self._instance  # Returns the parent for the EmbeddedDocument
 
+    @property
+    def unique_ip_address_voters(self):
+        return set(v.ip_address for v in self.votes)
+
 
 class Poll(db.Document):
     # id is implicit
@@ -61,6 +65,13 @@ class Poll(db.Document):
     def results_available(self):
         return datetime.utcnow() > self.results_available_at
 
+    @property
+    def unique_ip_address_voters(self):
+        unique = set()
+        for choice in self.choices:
+            unique.update(choice.unique_ip_address_voters)
+        return unique
+
     def clean(self):
         if self.voting_end and self.voting_end < self.voting_start:
             raise ValidationError("Voting End Time cannot be before Voting Start Time.")
@@ -68,18 +79,3 @@ class Poll(db.Document):
             self.results_available_at = self.created_at
         if len(self.choices) < 2:
             raise ValidationError("Poll must have at least 2 choices.")
-
-        if self.duplicate_vote_protection_mode == DuplicateVoteProtectionMode.LOGIN.value:
-            ...  # TODO: Require user log in
-        elif self.duplicate_vote_protection_mode == DuplicateVoteProtectionMode.COOKIE.value:
-            ...  # TODO: Check for cookie
-        elif self.duplicate_vote_protection_mode == DuplicateVoteProtectionMode.IP_ADDRESS.value:
-            unique_ip_voters = set()
-            total_votes = 0
-            for choice in self.choices:
-                for vote in choice.votes:
-                    unique_ip_voters.add(vote.ip_address)
-                    total_votes += 1
-
-            if len(unique_ip_voters) < total_votes:
-                raise ValidationError("Users cannot vote more than once from the same IP Address.")

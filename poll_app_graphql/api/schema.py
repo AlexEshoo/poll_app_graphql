@@ -1,4 +1,5 @@
 import graphene
+from graphql import GraphQLError
 from graphene_mongo import MongoengineObjectType
 from ..models import Poll as PollModel
 from ..models import Choice as ChoiceModel
@@ -98,6 +99,15 @@ class CastVote(graphene.Mutation):
     def mutate(self, info, poll_id, choice_id):
         poll = PollModel.objects.get(id=poll_id)
         choice = poll.choices.get(id=choice_id)
+
+        if poll.duplicate_vote_protection_mode == DuplicateVoteProtectionMode.LOGIN.value:
+            ...  # TODO: Require user log in
+        elif poll.duplicate_vote_protection_mode == DuplicateVoteProtectionMode.COOKIE.value:
+            ...  # TODO: Check for cookie
+        elif poll.duplicate_vote_protection_mode == DuplicateVoteProtectionMode.IP_ADDRESS.value:
+            if request.remote_addr in poll.unique_ip_address_voters:
+                raise GraphQLError("You may only vote once in this poll from this IP address.")
+
         choice.votes.append(VoteModel(ip_address=request.remote_addr))
 
         poll.save()
