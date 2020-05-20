@@ -5,17 +5,22 @@ from mongoengine import ValidationError as MongoEngineValidationError
 from bson.objectid import ObjectId
 from enum import Enum
 
+
 class DuplicateVoteProtectionMode(Enum):
     NONE = 0
     COOKIE = 1
     IP_ADDRESS = 2
     LOGIN = 3
 
+
 class SimpleError(Exception):
     def __init__(self, message):
         self.message = message
 
+
 ValidationError = SimpleError
+
+
 # ValidationError = MongoEngineValidationError
 
 class Vote(db.EmbeddedDocument):
@@ -64,3 +69,17 @@ class Poll(db.Document):
         if len(self.choices) < 2:
             raise ValidationError("Poll must have at least 2 choices.")
 
+        if self.duplicate_vote_protection_mode == DuplicateVoteProtectionMode.LOGIN.value:
+            ...  # TODO: Require user log in
+        elif self.duplicate_vote_protection_mode == DuplicateVoteProtectionMode.COOKIE.value:
+            ...  # TODO: Check for cookie
+        elif self.duplicate_vote_protection_mode == DuplicateVoteProtectionMode.IP_ADDRESS.value:
+            unique_ip_voters = set()
+            total_votes = 0
+            for choice in self.choices:
+                for vote in choice.votes:
+                    unique_ip_voters.add(vote.ip_address)
+                    total_votes += 1
+
+            if len(unique_ip_voters) < total_votes:
+                raise ValidationError("Users cannot vote more than once from the same IP Address.")
