@@ -29,6 +29,9 @@ class Choice(MongoengineObjectType):
         """
         return self.vote_count if self.poll.results_available else None
 
+    def resolve_votes(self, info):
+        return self.votes if self.poll.results_available else None
+
 
 class Poll(MongoengineObjectType):
     class Meta:
