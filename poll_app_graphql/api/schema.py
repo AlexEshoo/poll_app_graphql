@@ -91,19 +91,24 @@ class CreatePoll(graphene.Mutation):
         return poll
 
 
+class VoteResult(graphene.ObjectType):
+    ok = graphene.NonNull(graphene.Boolean)
+    fail_reason = graphene.String()
+
+
 class CastVote(graphene.Mutation):
     class Arguments:
         poll_id = graphene.ID()
         choice_id = graphene.ID()
 
-    Output = Poll
+    Output = VoteResult
 
     def mutate(self, info, poll_id, choice_id):
         poll = PollModel.objects.get(id=poll_id)
         choice = poll.choices.get(id=choice_id)
 
         if poll.voting_is_closed:
-            raise GraphQLError("Voting is closed for this poll.")
+            return VoteResult(ok=False, fail_reason="Voting is closed for this poll")
 
         if poll.duplicate_vote_protection_mode == DuplicateVoteProtectionMode.LOGIN.value:
             ...  # TODO: Require user log in
@@ -111,7 +116,7 @@ class CastVote(graphene.Mutation):
             polls_cookie = urllib.parse.unquote(request.cookies.get("polls", ""))
             voted_polls = polls_cookie.split(',')
             if str(poll.id) in voted_polls:
-                raise GraphQLError("You have already voted in this poll")
+                return VoteResult(ok=False, fail_reason="You have already voted in this poll")
 
             voted_polls.append(str(poll.id))
             g.setdefault("cookies", []).append(
@@ -123,12 +128,12 @@ class CastVote(graphene.Mutation):
 
         elif poll.duplicate_vote_protection_mode == DuplicateVoteProtectionMode.IP_ADDRESS.value:
             if request.remote_addr in poll.unique_ip_address_voters:
-                raise GraphQLError("You may only vote once in this poll from this IP address.")
+                return VoteResult(ok=False, fail_reason="You may only vote once in this poll from this IP address.")
 
         choice.votes.append(VoteModel(ip_address=request.remote_addr))
         poll.save()
 
-        return poll
+        return VoteResult(ok=True)
 
 
 class Query(graphene.ObjectType):
