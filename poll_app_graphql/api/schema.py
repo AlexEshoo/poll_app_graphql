@@ -1,12 +1,14 @@
 import graphene
+import urllib.parse
 from graphql import GraphQLError
 from graphene_mongo import MongoengineObjectType
 from ..models import Poll as PollModel
 from ..models import Choice as ChoiceModel
 from ..models import Vote as VoteModel
 from ..models import DuplicateVoteProtectionMode
+from .utils import Cookie
 
-from flask import request
+from flask import request, g
 
 from datetime import datetime, timedelta
 
@@ -103,13 +105,24 @@ class CastVote(graphene.Mutation):
         if poll.duplicate_vote_protection_mode == DuplicateVoteProtectionMode.LOGIN.value:
             ...  # TODO: Require user log in
         elif poll.duplicate_vote_protection_mode == DuplicateVoteProtectionMode.COOKIE.value:
-            ...  # TODO: Check for cookie
+            polls_cookie = urllib.parse.unquote(request.cookies.get("polls", ""))
+            voted_polls = polls_cookie.split(',')
+            if str(poll.id) in voted_polls:
+                raise GraphQLError("You have already voted in this poll")
+
+            voted_polls.append(str(poll.id))
+            g.setdefault("cookies", []).append(
+                Cookie(
+                    "polls",
+                    value=urllib.parse.quote(",".join(voted_polls))
+                )
+            )
+
         elif poll.duplicate_vote_protection_mode == DuplicateVoteProtectionMode.IP_ADDRESS.value:
             if request.remote_addr in poll.unique_ip_address_voters:
                 raise GraphQLError("You may only vote once in this poll from this IP address.")
 
         choice.votes.append(VoteModel(ip_address=request.remote_addr))
-
         poll.save()
 
         return poll
