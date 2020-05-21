@@ -66,6 +66,13 @@ class Poll(db.Document):
         return datetime.utcnow() > self.results_available_at
 
     @property
+    def voting_is_closed(self):
+        if self.voting_end:
+            return datetime.utcnow() > self.voting_end
+
+        return False
+
+    @property
     def unique_ip_address_voters(self):
         unique = set()
         for choice in self.choices:

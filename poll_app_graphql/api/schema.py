@@ -102,6 +102,9 @@ class CastVote(graphene.Mutation):
         poll = PollModel.objects.get(id=poll_id)
         choice = poll.choices.get(id=choice_id)
 
+        if poll.voting_is_closed:
+            raise GraphQLError("Voting is closed for this poll.")
+
         if poll.duplicate_vote_protection_mode == DuplicateVoteProtectionMode.LOGIN.value:
             ...  # TODO: Require user log in
         elif poll.duplicate_vote_protection_mode == DuplicateVoteProtectionMode.COOKIE.value:
