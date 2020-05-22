@@ -1,9 +1,10 @@
 from flask import Blueprint, g
 from flask_graphql import GraphQLView
+from flask_cors import CORS
 from .schema import schema
 
 api = Blueprint('api', __name__)
-
+CORS(api)  # Enables CORS
 
 class CustomGraphQlView(GraphQLView):
     def dispatch_request(self):
