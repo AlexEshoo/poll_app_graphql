@@ -98,14 +98,14 @@ class VoteResult(graphene.ObjectType):
 
 class CastVote(graphene.Mutation):
     class Arguments:
-        poll_id = graphene.ID()
-        choice_id = graphene.ID()
+        poll_id = graphene.ID(required=True)
+        choice_ids = graphene.List(graphene.NonNull(graphene.ID), required=True)
 
     Output = VoteResult
 
-    def mutate(self, info, poll_id, choice_id):
+    def mutate(self, info, poll_id, choice_ids):
         poll = PollModel.objects.get(id=poll_id)
-        choice = poll.choices.get(id=choice_id)
+        choices = [poll.choices.get(id=id) for id in choice_ids]
 
         if poll.voting_is_closed:
             return VoteResult(ok=False, fail_reason="Voting is closed for this poll")
@@ -130,7 +130,9 @@ class CastVote(graphene.Mutation):
             if request.remote_addr in poll.unique_ip_address_voters:
                 return VoteResult(ok=False, fail_reason="You may only vote once in this poll from this IP address.")
 
-        choice.votes.append(VoteModel(ip_address=request.remote_addr))
+        for choice in choices:
+            choice.votes.append(VoteModel(ip_address=request.remote_addr))
+
         poll.save()
 
         return VoteResult(ok=True)
