@@ -13,7 +13,8 @@ class DevelopmentConfig(Config):
     MONGODB_SETTINGS = {
         'db': 'pollapp',
         'host': 'localhost',
-        'port': 27017
+        'port': 27017,
+        "tz_aware": True
     }
 
 

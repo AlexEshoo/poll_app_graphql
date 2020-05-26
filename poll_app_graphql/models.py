@@ -1,6 +1,6 @@
 from . import db
-from datetime import datetime
-from mongoengine import StringField, EmbeddedDocumentListField, ComplexDateTimeField, ObjectIdField, IntField
+from datetime import datetime, timezone
+from mongoengine import StringField, EmbeddedDocumentListField, DateTimeField, ObjectIdField, IntField
 from mongoengine import ValidationError as MongoEngineValidationError
 from bson.objectid import ObjectId
 from enum import Enum
@@ -25,7 +25,7 @@ ValidationError = SimpleError
 
 class Vote(db.EmbeddedDocument):
     id = ObjectIdField(required=True, default=ObjectId)
-    cast_time = ComplexDateTimeField(default=datetime.utcnow)
+    cast_time = DateTimeField(default=datetime.utcnow)
     ip_address = StringField()  # validation not needed since always populated by flask request proxy (?)
 
 
@@ -49,10 +49,10 @@ class Choice(db.EmbeddedDocument):
 
 class Poll(db.Document):
     # id is implicit
-    created_at = ComplexDateTimeField(default=datetime.utcnow)
-    voting_start = ComplexDateTimeField(default=datetime.utcnow)
-    voting_end = ComplexDateTimeField(default=None, null=True)
-    results_available_at = ComplexDateTimeField(default=datetime.utcnow)
+    created_at = DateTimeField(default=datetime.utcnow)
+    voting_start = DateTimeField(default=datetime.utcnow)
+    voting_end = DateTimeField(default=None, null=True)
+    results_available_at = DateTimeField(default=datetime.utcnow)
     question = StringField(max_length=512)
     choices = EmbeddedDocumentListField(Choice)
     duplicate_vote_protection_mode = IntField()
@@ -63,12 +63,12 @@ class Poll(db.Document):
 
     @property
     def results_available(self):
-        return datetime.utcnow() > self.results_available_at
+        return datetime.now(timezone.utc) > self.results_available_at
 
     @property
     def voting_is_closed(self):
         if self.voting_end:
-            return datetime.utcnow() > self.voting_end
+            return datetime.now(timezone.utc) > self.voting_end
 
         return False
 
