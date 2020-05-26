@@ -4,7 +4,7 @@ from flask_cors import CORS
 from .schema import schema
 
 api = Blueprint('api', __name__)
-CORS(api)  # Enables CORS
+CORS(api, supports_credentials=True)  # Enables CORS with cross origin cookies
 
 class CustomGraphQlView(GraphQLView):
     def dispatch_request(self):
