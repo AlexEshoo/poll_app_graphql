@@ -130,6 +130,9 @@ class CastVote(graphene.Mutation):
             if request.remote_addr in poll.unique_ip_address_voters:
                 return VoteResult(ok=False, fail_reason="You may only vote once in this poll from this IP address.")
 
+        if len(choices) > poll.selection_limit:
+            return VoteResult(ok=False, fail_reason=f"You may only make {poll.selection_limit} selections.")
+
         for choice in choices:
             choice.votes.append(VoteModel(ip_address=request.remote_addr))
 
