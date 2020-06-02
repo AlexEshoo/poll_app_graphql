@@ -66,7 +66,6 @@ class Poll(db.Document):
 
     @property
     def results_available(self):
-        print(self.results_available_at.tzinfo)  # TODO Why is this None?
         return datetime.now(timezone.utc) > self.results_available_at
 
     @property
