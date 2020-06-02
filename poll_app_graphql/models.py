@@ -1,5 +1,6 @@
 from . import db
 from datetime import datetime, timezone
+from functools import partial
 from mongoengine import StringField, EmbeddedDocumentListField, DateTimeField, ObjectIdField, IntField
 from mongoengine import ValidationError as MongoEngineValidationError
 from bson.objectid import ObjectId
@@ -25,7 +26,8 @@ ValidationError = SimpleError
 
 class Vote(db.EmbeddedDocument):
     id = ObjectIdField(required=True, default=ObjectId)
-    cast_time = DateTimeField(default=datetime.utcnow)
+    cast_time = DateTimeField(default=partial(datetime.now, tz=timezone.utc))
+    cast_time = DateTimeField(default=partial(datetime.now, tz=timezone.utc))
     ip_address = StringField()  # validation not needed since always populated by flask request proxy (?)
 
 
@@ -49,10 +51,10 @@ class Choice(db.EmbeddedDocument):
 
 class Poll(db.Document):
     # id is implicit
-    created_at = DateTimeField(default=datetime.utcnow)
-    voting_start = DateTimeField(default=datetime.utcnow)
+    created_at = DateTimeField(default=partial(datetime.now, tz=timezone.utc))
+    voting_start = DateTimeField(default=partial(datetime.now, tz=timezone.utc))
     voting_end = DateTimeField(default=None, null=True)
-    results_available_at = DateTimeField(default=datetime.utcnow)
+    results_available_at = DateTimeField(default=partial(datetime.now, tz=timezone.utc))
     question = StringField(max_length=512)
     choices = EmbeddedDocumentListField(Choice)
     duplicate_vote_protection_mode = IntField()
@@ -64,6 +66,7 @@ class Poll(db.Document):
 
     @property
     def results_available(self):
+        print(self.results_available_at.tzinfo)  # TODO Why is this None?
         return datetime.now(timezone.utc) > self.results_available_at
 
     @property

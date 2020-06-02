@@ -1,5 +1,6 @@
 import os
 from collections import defaultdict
+from datetime import timezone
 
 basedir = os.path.abspath(os.path.dirname(__file__))
 
@@ -14,7 +15,8 @@ class DevelopmentConfig(Config):
         'db': 'pollapp',
         'host': 'localhost',
         'port': 27017,
-        "tz_aware": True
+        "tz_aware": True,
+        "tzinfo": timezone.utc
     }
 
 
