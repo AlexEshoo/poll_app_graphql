@@ -57,6 +57,7 @@ class PollInput(graphene.InputObjectType):
     voting_end_in = graphene.Int()  # Time in seconds from submission
     results_available_in = graphene.Int()  # Time in seconds from submission
     duplicate_vote_protection_mode = DuplicateVoteProtectionModeEnum()
+    selection_limit = graphene.Int()
 
 
 class CreatePoll(graphene.Mutation):
@@ -85,7 +86,8 @@ class CreatePoll(graphene.Mutation):
             voting_start=voting_start,
             voting_end=voting_end,
             results_available_at=results_available_at,
-            duplicate_vote_protection_mode=poll_data.duplicate_vote_protection_mode
+            duplicate_vote_protection_mode=poll_data.duplicate_vote_protection_mode,
+            selection_limit=poll_data.selection_limit
         ).save()
 
         return poll

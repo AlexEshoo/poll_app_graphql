@@ -58,7 +58,7 @@ class Poll(db.Document):
     question = StringField(max_length=512)
     choices = EmbeddedDocumentListField(Choice)
     duplicate_vote_protection_mode = IntField()
-    selection_limit = IntField(default=1)
+    selection_limit = IntField(default=1, null=True)
 
     @property
     def vote_count(self):
