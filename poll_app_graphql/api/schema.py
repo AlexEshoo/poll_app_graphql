@@ -112,6 +112,9 @@ class CastVote(graphene.Mutation):
         if poll.voting_is_closed:
             return VoteResult(ok=False, fail_reason="Voting is closed for this poll")
 
+        if len(choices) > poll.selection_limit:
+            return VoteResult(ok=False, fail_reason=f"You may only make {poll.selection_limit} selections.")
+
         if poll.duplicate_vote_protection_mode == DuplicateVoteProtectionMode.LOGIN.value:
             ...  # TODO: Require user log in
         elif poll.duplicate_vote_protection_mode == DuplicateVoteProtectionMode.COOKIE.value:
@@ -131,9 +134,6 @@ class CastVote(graphene.Mutation):
         elif poll.duplicate_vote_protection_mode == DuplicateVoteProtectionMode.IP_ADDRESS.value:
             if request.remote_addr in poll.unique_ip_address_voters:
                 return VoteResult(ok=False, fail_reason="You may only vote once in this poll from this IP address.")
-
-        if len(choices) > poll.selection_limit:
-            return VoteResult(ok=False, fail_reason=f"You may only make {poll.selection_limit} selections.")
 
         for choice in choices:
             choice.votes.append(VoteModel(ip_address=request.remote_addr))

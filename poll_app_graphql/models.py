@@ -27,7 +27,6 @@ ValidationError = SimpleError
 class Vote(db.EmbeddedDocument):
     id = ObjectIdField(required=True, default=ObjectId)
     cast_time = DateTimeField(default=partial(datetime.now, tz=timezone.utc))
-    cast_time = DateTimeField(default=partial(datetime.now, tz=timezone.utc))
     ip_address = StringField()  # validation not needed since always populated by flask request proxy (?)
 
 
