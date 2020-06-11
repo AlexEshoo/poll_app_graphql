@@ -6,6 +6,7 @@ from ..models import Poll as PollModel
 from ..models import Choice as ChoiceModel
 from ..models import Vote as VoteModel
 from ..models import DuplicateVoteProtectionMode
+from ..models import User as UserModel
 from .utils import Cookie
 
 from flask import request, g
@@ -13,6 +14,12 @@ from flask import request, g
 from datetime import datetime, timedelta
 
 DuplicateVoteProtectionModeEnum = graphene.Enum.from_enum(DuplicateVoteProtectionMode)
+
+
+class User(MongoengineObjectType):
+    class Meta:
+        model = UserModel
+        exclude_fields = ("password_hash")
 
 
 class Vote(MongoengineObjectType):
@@ -146,12 +153,16 @@ class CastVote(graphene.Mutation):
 class Query(graphene.ObjectType):
     polls = graphene.List(Poll)
     poll = graphene.Field(Poll, poll_id=graphene.ID(required=True))
+    users = graphene.List(User)
 
     def resolve_polls(self, info):
         return list(PollModel.objects.all())
 
     def resolve_poll(self, info, poll_id):
         return PollModel.objects.get(id=poll_id)
+
+    def resolve_users(self, info):
+        return list(UserModel.objects.all())
 
 
 class Mutation(graphene.ObjectType):

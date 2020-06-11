@@ -1,10 +1,13 @@
 from . import db
+from . import login_manager
 from datetime import datetime, timezone
 from functools import partial
 from mongoengine import StringField, EmbeddedDocumentListField, DateTimeField, ObjectIdField, IntField
 from mongoengine import ValidationError as MongoEngineValidationError
 from bson.objectid import ObjectId
 from enum import Enum
+from werkzeug.security import generate_password_hash, check_password_hash
+from flask_login import UserMixin
 
 
 class DuplicateVoteProtectionMode(Enum):
@@ -88,3 +91,25 @@ class Poll(db.Document):
             self.results_available_at = self.created_at
         if len(self.choices) < 2:
             raise ValidationError("Poll must have at least 2 choices.")
+
+
+class User(db.Document, UserMixin):
+    joined_at = DateTimeField(default=partial(datetime.now, tz=timezone.utc))
+    username = StringField(max_length=32)
+    password_hash = StringField()
+
+    @property
+    def password(self):
+        raise AttributeError("Passwords are not stored.")
+
+    @password.setter
+    def password(self, raw_password):
+        self.password_hash = generate_password_hash(raw_password)
+
+    def verify_password(self, raw_password):
+        return check_password_hash(self.password_hash, raw_password)
+
+
+@login_manager.user_loader
+def load_user(user_id):
+    return User.objects(id=user_id).first()
