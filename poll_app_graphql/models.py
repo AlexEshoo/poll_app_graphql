@@ -95,7 +95,7 @@ class Poll(db.Document):
 
 class User(db.Document, UserMixin):
     joined_at = DateTimeField(default=partial(datetime.now, tz=timezone.utc))
-    username = StringField(max_length=32)
+    username = StringField(max_length=32, unique=True)
     password_hash = StringField()
 
     @property

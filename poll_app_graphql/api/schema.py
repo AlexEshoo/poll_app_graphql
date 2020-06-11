@@ -10,6 +10,7 @@ from ..models import User as UserModel
 from .utils import Cookie
 
 from flask import request, g
+from flask_login import login_user
 
 from datetime import datetime, timedelta
 
@@ -100,7 +101,7 @@ class CreatePoll(graphene.Mutation):
         return poll
 
 
-class VoteResult(graphene.ObjectType):
+class SuccessResult(graphene.ObjectType):
     ok = graphene.NonNull(graphene.Boolean)
     fail_reason = graphene.String()
 
@@ -110,17 +111,17 @@ class CastVote(graphene.Mutation):
         poll_id = graphene.ID(required=True)
         choice_ids = graphene.List(graphene.NonNull(graphene.ID), required=True)
 
-    Output = VoteResult
+    Output = SuccessResult
 
     def mutate(self, info, poll_id, choice_ids):
         poll = PollModel.objects.get(id=poll_id)
         choices = [poll.choices.get(id=id) for id in choice_ids]
 
         if poll.voting_is_closed:
-            return VoteResult(ok=False, fail_reason="Voting is closed for this poll")
+            return SuccessResult(ok=False, fail_reason="Voting is closed for this poll")
 
         if len(choices) > poll.selection_limit:
-            return VoteResult(ok=False, fail_reason=f"You may only make {poll.selection_limit} selections.")
+            return SuccessResult(ok=False, fail_reason=f"You may only make {poll.selection_limit} selections.")
 
         if poll.duplicate_vote_protection_mode == DuplicateVoteProtectionMode.LOGIN.value:
             ...  # TODO: Require user log in
@@ -128,7 +129,7 @@ class CastVote(graphene.Mutation):
             polls_cookie = urllib.parse.unquote(request.cookies.get("polls", ""))
             voted_polls = polls_cookie.split(',')
             if str(poll.id) in voted_polls:
-                return VoteResult(ok=False, fail_reason="You have already voted in this poll")
+                return SuccessResult(ok=False, fail_reason="You have already voted in this poll")
 
             voted_polls.append(str(poll.id))
             g.setdefault("cookies", []).append(
@@ -140,15 +141,35 @@ class CastVote(graphene.Mutation):
 
         elif poll.duplicate_vote_protection_mode == DuplicateVoteProtectionMode.IP_ADDRESS.value:
             if request.remote_addr in poll.unique_ip_address_voters:
-                return VoteResult(ok=False, fail_reason="You may only vote once in this poll from this IP address.")
+                return SuccessResult(ok=False, fail_reason="You may only vote once in this poll from this IP address.")
 
         for choice in choices:
             choice.votes.append(VoteModel(ip_address=request.remote_addr))
 
         poll.save()
 
-        return VoteResult(ok=True)
+        return SuccessResult(ok=True)
 
+
+class Login(graphene.Mutation):
+    class Arguments:
+        username = graphene.String(required=True)
+        password = graphene.String(required=True)
+        remember_me = graphene.Boolean(default_value=False)
+
+    Output = SuccessResult
+
+    def mutate(self, info, username, password, remember_me):
+        user = UserModel.objects(username=username).first()
+
+        if user is None:
+            return SuccessResult(ok=False, fail_reason="Username does not exist.")
+
+        if not user.verify_password(password):
+            return SuccessResult(ok=False, fail_reason="Password is incorrect.")
+
+        login_user(user, remember=remember_me)
+        return SuccessResult(ok=True)
 
 class Query(graphene.ObjectType):
     polls = graphene.List(Poll)
@@ -168,6 +189,7 @@ class Query(graphene.ObjectType):
 class Mutation(graphene.ObjectType):
     create_poll = CreatePoll.Field()
     cast_vote = CastVote.Field()
+    login = Login.Field()
 
 
 schema = graphene.Schema(
