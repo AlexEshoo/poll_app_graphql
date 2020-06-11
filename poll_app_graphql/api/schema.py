@@ -205,7 +205,7 @@ class Register(graphene.Mutation):
 class Query(graphene.ObjectType):
     polls = graphene.List(Poll)
     poll = graphene.Field(Poll, poll_id=graphene.ID(required=True))
-    users = graphene.List(User)
+    me = graphene.Field(User)
 
     def resolve_polls(self, info):
         return list(PollModel.objects.all())
@@ -213,8 +213,12 @@ class Query(graphene.ObjectType):
     def resolve_poll(self, info, poll_id):
         return PollModel.objects.get(id=poll_id)
 
-    def resolve_users(self, info):
-        return list(UserModel.objects.all())
+    def resolve_me(self, info):
+        if current_user.is_anonymous:
+            return None
+
+        return current_user._get_current_object()
+
 
 
 class Mutation(graphene.ObjectType):
