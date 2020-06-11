@@ -173,6 +173,7 @@ class Login(graphene.Mutation):
         login_user(user, remember=remember_me)
         return SuccessResult(ok=True)
 
+
 class Register(graphene.Mutation):
     class Arguments:
         username = graphene.String(required=True)
@@ -190,6 +191,7 @@ class Register(graphene.Mutation):
             return SuccessResult(ok=False, fail_reason="Username is taken.")
 
         return SuccessResult(ok=True)
+
 
 class Query(graphene.ObjectType):
     polls = graphene.List(Poll)
