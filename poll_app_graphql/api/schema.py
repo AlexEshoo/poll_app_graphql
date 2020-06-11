@@ -12,6 +12,8 @@ from .utils import Cookie
 from flask import request, g
 from flask_login import login_user
 
+from mongoengine import NotUniqueError
+
 from datetime import datetime, timedelta
 
 DuplicateVoteProtectionModeEnum = graphene.Enum.from_enum(DuplicateVoteProtectionMode)
@@ -171,6 +173,24 @@ class Login(graphene.Mutation):
         login_user(user, remember=remember_me)
         return SuccessResult(ok=True)
 
+class Register(graphene.Mutation):
+    class Arguments:
+        username = graphene.String(required=True)
+        password = graphene.String(required=True)
+
+    Output = SuccessResult
+
+    def mutate(self, info, username, password):
+        new_user = UserModel(username=username)
+        new_user.password = password  # Sets hash internally and discards raw password
+
+        try:
+            new_user.save()
+        except NotUniqueError:
+            return SuccessResult(ok=False, fail_reason="Username is taken.")
+
+        return SuccessResult(ok=True)
+
 class Query(graphene.ObjectType):
     polls = graphene.List(Poll)
     poll = graphene.Field(Poll, poll_id=graphene.ID(required=True))
@@ -190,6 +210,7 @@ class Mutation(graphene.ObjectType):
     create_poll = CreatePoll.Field()
     cast_vote = CastVote.Field()
     login = Login.Field()
+    register = Register.Field()
 
 
 schema = graphene.Schema(
