@@ -91,6 +91,7 @@ class CreatePoll(graphene.Mutation):
             results_available_at = request_time + timedelta(seconds=poll_data.results_available_in)
 
         poll = PollModel(
+            created_by=current_user._get_current_object() if not current_user.is_anonymous else None,
             question=poll_data.question,
             choices=poll_data.choices,
             voting_start=voting_start,
@@ -99,6 +100,10 @@ class CreatePoll(graphene.Mutation):
             duplicate_vote_protection_mode=poll_data.duplicate_vote_protection_mode,
             selection_limit=poll_data.selection_limit
         ).save()
+
+        if not current_user.is_anonymous:
+            current_user.created_polls.append(poll)
+            current_user.save()
 
         return poll
 

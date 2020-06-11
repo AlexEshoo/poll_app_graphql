@@ -2,7 +2,7 @@ from . import db
 from . import login_manager
 from datetime import datetime, timezone
 from functools import partial
-from mongoengine import StringField, EmbeddedDocumentListField, DateTimeField, ObjectIdField, IntField, ReferenceField
+from mongoengine import StringField, EmbeddedDocumentListField, DateTimeField, ObjectIdField, IntField, ReferenceField, ListField
 from mongoengine import ValidationError as MongoEngineValidationError
 from bson.objectid import ObjectId
 from enum import Enum
@@ -59,6 +59,7 @@ class Choice(db.EmbeddedDocument):
 class Poll(db.Document):
     # id is implicit
     created_at = DateTimeField(default=partial(datetime.now, tz=timezone.utc))
+    created_by = ReferenceField("User")
     voting_start = DateTimeField(default=partial(datetime.now, tz=timezone.utc))
     voting_end = DateTimeField(default=None, null=True)
     results_available_at = DateTimeField(default=partial(datetime.now, tz=timezone.utc))
@@ -109,6 +110,7 @@ class User(db.Document, UserMixin):
     joined_at = DateTimeField(default=partial(datetime.now, tz=timezone.utc))
     username = StringField(max_length=32, unique=True)
     password_hash = StringField()
+    created_polls = ListField(ReferenceField(Poll))
 
     @property
     def password(self):
