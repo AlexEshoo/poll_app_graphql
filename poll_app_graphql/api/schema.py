@@ -10,7 +10,7 @@ from ..models import User as UserModel
 from .utils import Cookie
 
 from flask import request, g
-from flask_login import login_user
+from flask_login import login_user, current_user
 
 from mongoengine import NotUniqueError
 
@@ -126,7 +126,11 @@ class CastVote(graphene.Mutation):
             return SuccessResult(ok=False, fail_reason=f"You may only make {poll.selection_limit} selections.")
 
         if poll.duplicate_vote_protection_mode == DuplicateVoteProtectionMode.LOGIN.value:
-            ...  # TODO: Require user log in
+            if current_user.is_anonymous:
+                return SuccessResult(ok=False, fail_reason="You must be logged in to vote in this poll.")
+            if current_user._get_current_object() in poll.unique_user_voters:
+                return SuccessResult(ok=False, fail_reason="You have already voted in this poll")
+
         elif poll.duplicate_vote_protection_mode == DuplicateVoteProtectionMode.COOKIE.value:
             polls_cookie = urllib.parse.unquote(request.cookies.get("polls", ""))
             voted_polls = polls_cookie.split(',')
@@ -146,7 +150,12 @@ class CastVote(graphene.Mutation):
                 return SuccessResult(ok=False, fail_reason="You may only vote once in this poll from this IP address.")
 
         for choice in choices:
-            choice.votes.append(VoteModel(ip_address=request.remote_addr))
+            choice.votes.append(
+                VoteModel(
+                    ip_address=request.remote_addr,
+                    user=current_user._get_current_object() if not current_user.is_anonymous else None
+                )
+            )
 
         poll.save()
 

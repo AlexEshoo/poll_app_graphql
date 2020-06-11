@@ -2,12 +2,12 @@ from . import db
 from . import login_manager
 from datetime import datetime, timezone
 from functools import partial
-from mongoengine import StringField, EmbeddedDocumentListField, DateTimeField, ObjectIdField, IntField
+from mongoengine import StringField, EmbeddedDocumentListField, DateTimeField, ObjectIdField, IntField, ReferenceField
 from mongoengine import ValidationError as MongoEngineValidationError
 from bson.objectid import ObjectId
 from enum import Enum
 from werkzeug.security import generate_password_hash, check_password_hash
-from flask_login import UserMixin
+from flask_login import UserMixin, AnonymousUserMixin
 
 
 class DuplicateVoteProtectionMode(Enum):
@@ -31,6 +31,7 @@ class Vote(db.EmbeddedDocument):
     id = ObjectIdField(required=True, default=ObjectId)
     cast_time = DateTimeField(default=partial(datetime.now, tz=timezone.utc))
     ip_address = StringField()  # validation not needed since always populated by flask request proxy (?)
+    user = ReferenceField("User")
 
 
 class Choice(db.EmbeddedDocument):
@@ -49,6 +50,10 @@ class Choice(db.EmbeddedDocument):
     @property
     def unique_ip_address_voters(self):
         return set(v.ip_address for v in self.votes)
+
+    @property
+    def unique_user_voters(self):
+        return set(v.user for v in self.votes)
 
 
 class Poll(db.Document):
@@ -82,6 +87,13 @@ class Poll(db.Document):
         unique = set()
         for choice in self.choices:
             unique.update(choice.unique_ip_address_voters)
+        return unique
+
+    @property
+    def unique_user_voters(self):
+        unique = set()
+        for choice in self.choices:
+            unique.update(choice.unique_user_voters)
         return unique
 
     def clean(self):
