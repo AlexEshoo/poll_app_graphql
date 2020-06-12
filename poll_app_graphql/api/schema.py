@@ -176,6 +176,9 @@ class Login(graphene.Mutation):
     Output = SuccessResult
 
     def mutate(self, info, username, password, remember_me):
+        if not current_user.is_anonymous:
+            return SuccessResult(ok=False, fail_reason="User is already logged in.")
+
         user = UserModel.objects(username=username).first()
 
         if user is None:
