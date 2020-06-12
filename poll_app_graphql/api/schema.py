@@ -10,7 +10,7 @@ from ..models import User as UserModel
 from .utils import Cookie
 
 from flask import request, g
-from flask_login import login_user, current_user
+from flask_login import login_user, logout_user, current_user
 
 from mongoengine import NotUniqueError
 
@@ -188,6 +188,17 @@ class Login(graphene.Mutation):
         return SuccessResult(ok=True)
 
 
+class Logout(graphene.Mutation):
+    Output= SuccessResult
+
+    def mutate(self, info):
+        if current_user.is_anonymous:
+            return SuccessResult(ok=False, fail_reason="User is not logged in.")
+
+        logout_user()
+        return SuccessResult(ok=True)
+
+
 class Register(graphene.Mutation):
     class Arguments:
         username = graphene.String(required=True)
@@ -230,6 +241,7 @@ class Mutation(graphene.ObjectType):
     create_poll = CreatePoll.Field()
     cast_vote = CastVote.Field()
     login = Login.Field()
+    logout = Logout.Field()
     register = Register.Field()
 
 
