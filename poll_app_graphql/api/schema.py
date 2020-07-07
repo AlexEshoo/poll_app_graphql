@@ -192,7 +192,7 @@ class Login(graphene.Mutation):
 
 
 class Logout(graphene.Mutation):
-    Output= SuccessResult
+    Output = SuccessResult
 
     def mutate(self, info):
         if current_user.is_anonymous:
@@ -237,7 +237,6 @@ class Query(graphene.ObjectType):
             return None
 
         return current_user._get_current_object()
-
 
 
 class Mutation(graphene.ObjectType):
