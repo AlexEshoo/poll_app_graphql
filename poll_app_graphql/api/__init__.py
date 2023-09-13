@@ -1,5 +1,5 @@
 from flask import Blueprint, g
-from flask_graphql import GraphQLView
+from graphql_server.flask.graphqlview import GraphQLView
 from flask_cors import CORS
 from .schema import schema
 

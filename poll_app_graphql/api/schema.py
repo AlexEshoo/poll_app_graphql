@@ -97,7 +97,7 @@ class CreatePoll(graphene.Mutation):
             voting_start=voting_start,
             voting_end=voting_end,
             results_available_at=results_available_at,
-            duplicate_vote_protection_mode=poll_data.duplicate_vote_protection_mode,
+            duplicate_vote_protection_mode=poll_data.duplicate_vote_protection_mode.value,
             selection_limit=poll_data.selection_limit
         ).save()
 
