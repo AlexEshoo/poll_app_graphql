@@ -113,35 +113,92 @@ class SuccessResult(graphene.ObjectType):
     fail_reason = graphene.String()
 
 
+class MutationFailure(graphene.Interface):
+    error_message = graphene.String(required=True)
+
+
+class CastVoteSuccess(graphene.ObjectType):
+    votes = graphene.List(Vote)
+
+
+class CastVoteFailVoteLimit(graphene.ObjectType):
+    class Meta:
+        interfaces = (MutationFailure,)
+
+
+class CastVoteFailSelectionLimit(graphene.ObjectType):
+    class Meta:
+        interfaces = (MutationFailure,)
+
+
+class CastVoteFailPollClosed(graphene.ObjectType):
+    class Meta:
+        interfaces = (MutationFailure,)
+
+
+class CastVoteFailLoginRequired(graphene.ObjectType):
+    class Meta:
+        interfaces = (MutationFailure,)
+
+
+class CastVotePayload(graphene.Union):
+    class Meta:
+        types = (
+            CastVoteSuccess,
+            CastVoteFailPollClosed,
+            CastVoteFailVoteLimit,
+            CastVoteFailSelectionLimit,
+            CastVoteFailLoginRequired
+        )
+
+
+# noinspection PyArgumentList
 class CastVote(graphene.Mutation):
     class Arguments:
         poll_id = graphene.ID(required=True)
         choice_ids = graphene.List(graphene.NonNull(graphene.ID), required=True)
 
-    Output = SuccessResult
+    Output = CastVotePayload
 
     def mutate(self, info, poll_id, choice_ids):
         poll = PollModel.objects.get(id=poll_id)
         choices = [poll.choices.get(id=id) for id in choice_ids]
 
+        polls_cookie = urllib.parse.unquote(request.cookies.get("polls", ""))
+        voted_polls = polls_cookie.split(',')
+
         if poll.voting_is_closed:
-            return SuccessResult(ok=False, fail_reason="Voting is closed for this poll")
+            return CastVoteFailPollClosed(error_message="Voting is closed for this poll")
 
         if len(choices) > poll.selection_limit:
-            return SuccessResult(ok=False, fail_reason=f"You may only make {poll.selection_limit} selections.")
+            return CastVoteFailSelectionLimit(error_message="You may only make {poll.selection_limit} selections.")
 
         if poll.duplicate_vote_protection_mode == DuplicateVoteProtectionMode.LOGIN.value:
             if current_user.is_anonymous:
-                return SuccessResult(ok=False, fail_reason="You must be logged in to vote in this poll.")
+                return CastVoteFailLoginRequired(error_message="You must be logged in to vote in this poll.")
             if current_user._get_current_object() in poll.unique_user_voters:
-                return SuccessResult(ok=False, fail_reason="You have already voted in this poll")
+                return CastVoteFailVoteLimit(error_message="You have already voted in this poll")
 
         elif poll.duplicate_vote_protection_mode == DuplicateVoteProtectionMode.COOKIE.value:
-            polls_cookie = urllib.parse.unquote(request.cookies.get("polls", ""))
-            voted_polls = polls_cookie.split(',')
             if str(poll.id) in voted_polls:
-                return SuccessResult(ok=False, fail_reason="You have already voted in this poll")
+                return CastVoteFailVoteLimit(error_message="You have already voted in this poll")
 
+        elif poll.duplicate_vote_protection_mode == DuplicateVoteProtectionMode.IP_ADDRESS.value:
+            if request.remote_addr in poll.unique_ip_address_voters:
+                return CastVoteFailVoteLimit(error_message="You have already voted in this poll")
+
+        votes = []
+        for choice in choices:
+            vote = VoteModel(
+                ip_address=request.remote_addr,
+                user=current_user._get_current_object() if not current_user.is_anonymous else None
+            )
+            choice.votes.append(vote)
+            votes.append(vote)
+
+        poll.save()
+
+        if poll.duplicate_vote_protection_mode == DuplicateVoteProtectionMode.COOKIE.value:
             voted_polls.append(str(poll.id))
             g.setdefault("cookies", []).append(
                 Cookie(
@@ -150,23 +207,10 @@ class CastVote(graphene.Mutation):
                 )
             )
 
-        elif poll.duplicate_vote_protection_mode == DuplicateVoteProtectionMode.IP_ADDRESS.value:
-            if request.remote_addr in poll.unique_ip_address_voters:
-                return SuccessResult(ok=False, fail_reason="You may only vote once in this poll from this IP address.")
-
-        for choice in choices:
-            choice.votes.append(
-                VoteModel(
-                    ip_address=request.remote_addr,
-                    user=current_user._get_current_object() if not current_user.is_anonymous else None
-                )
-            )
-
-        poll.save()
-
-        return SuccessResult(ok=True)
+        return CastVoteSuccess(votes=votes)
 
 
+# noinspection PyArgumentList
 class Login(graphene.Mutation):
     class Arguments:
         username = graphene.String(required=True)
@@ -191,6 +235,7 @@ class Login(graphene.Mutation):
         return SuccessResult(ok=True)
 
 
+# noinspection PyArgumentList
 class Logout(graphene.Mutation):
     Output = SuccessResult
 
@@ -202,6 +247,7 @@ class Logout(graphene.Mutation):
         return SuccessResult(ok=True)
 
 
+# noinspection PyArgumentList
 class Register(graphene.Mutation):
     class Arguments:
         username = graphene.String(required=True)
